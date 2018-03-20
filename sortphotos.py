@@ -237,7 +237,7 @@ def check_for_early_morning_photos(date, day_begins):
 
 
 def sortPhotos(src_dir, dest_dir, sort_format, rename_format, recursive=False, day_begins=0, copy_files=False,
-               test=False, remove_duplicates=True, verbose=True, disable_time_zone_adjust=False, ignore_file_types=[],
+               test=False, remove_duplicates=True, keep_filename=False, verbose=True, disable_time_zone_adjust=False, ignore_file_types=[],
                additional_groups_to_ignore=['File'], additional_tags_to_ignore=[], use_only_groups=None,
                use_only_tags=None, rename_with_camera_model=False, show_warnings=True, src_file_regex=None,
                src_file_extension=[], prioritize_groups=None, prioritize_tags=None):
@@ -267,6 +267,8 @@ def sortPhotos(src_dir, dest_dir, sort_format, rename_format, recursive=False, d
         file types to be ignored. By default, hidden files (.*) are ignored
     remove_duplicates : bool
         True to remove files that are exactly the same in name and a file hash
+    keep_filename : bool
+        True to append original filename in case of duplicates instead of increasing number
     disable_time_zone_adjust : bool
         True to disable time zone adjustments
     day_begins : int
@@ -446,11 +448,14 @@ def sortPhotos(src_dir, dest_dir, sort_format, rename_format, recursive=False, d
                     break
 
                 else:  # name is same, but file is different
-                    dest_file = root + '_' + str(append) + ext
-                    append += 1
+                    if keep_filename:
+                        orig_filename = os.path.splitext(os.path.basename(src_file))[0]
+                        dest_file = root + '_' + orig_filename + ext
+                    else:
+                        dest_file = root + '_' + str(append) + ext
+                        append += 1
                     if show_warnings:
                         print('Same name already exists...renaming to: ' + dest_file)
-
             else:
                 break
 
@@ -509,6 +514,9 @@ def main():
                         help="choose destination folder structure using datetime format \n\	https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior. \n\	Use forward slashes / to indicate subdirectory(ies) (independent of your OS convention). \n\ The default is '%%Y/%%m-%%b', which separates by year then month \n\ with both the month number and name (e.g., 2012/02-Feb).")
     parser.add_argument('--rename', type=str, default=None,
                         help="rename file using format codes \n\ https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior. \n\	default is None which just uses original filename")
+    parser.add_argument('--keep-filename', action='store_true',
+                        help='In case of duplicated output filenames the original file name will be appended instead of an inreasing number',
+                        default=False)
 
     parser.add_argument('--ignore-file-types', type=str, nargs='+', default=[],
                         help="ignore file types\n\	default is to only ignore hidden files (.*)")
@@ -556,6 +564,7 @@ def main():
     args['show_warnings'], args['src_file_regex'], args[
         'src_file_extension'] = temp_args.show_warnings, temp_args.src_file_regex, temp_args.src_file_extension
     args['prioritize_groups'], args['prioritize_tags'] = temp_args.prioritize_groups, temp_args.prioritize_tags
+    args['keep_filename'] = temp_args.keep_filename
 
     sortPhotos(**args)
 
